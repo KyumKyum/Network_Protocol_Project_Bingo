@@ -1,15 +1,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
 #define BUF_SIZE 512 //* Definition for Buffer size;
+#define NUM_LIMIT 25 //* Definition for number limit in bingo game.
 
-void error_handling(char *message);
-void bingo(int sock);
-int handle_server_msg(char *state, char *value);
+void error_handling(char *);
+void bingo(int);
+void bingo_init(void);    //* Intialize bingo
+void bingo_shuffle(void); //* Shuffle the bingo
+void bingo_print(void);   //* Print bingo plates
+int handle_server_msg(char *, char *);
+
+int bingo_value[25] = {0}; //* bingo_value: show bingo number, became -1 if the number checked.
 
 int main(int argc, char *argv[])
 {
@@ -69,23 +76,76 @@ void bingo(int sock)
     ? e.g.) Opponent Found, game starts! (Current Client goes first) => START_FIRST (START FIRST is a message with a single STATE. It doesn't have any value.)
     */
 
-    char *state = strtok(state, delimiter);
-    char *value = strtok(NULL, delimiter);
+    if (str_len > 0) //* Works if sth arrives
+    {
+      char *state = strtok(state, delimiter);
+      char *value = strtok(NULL, delimiter);
 
-    flag = handle_server_msg(state, value); //* Handle Server-side message
-    //: Based on the flag value, the client will determine to start, continue or terminate the bingo game.
-    /*
-    > Messages
-    * 0: PENDING - Waiting for another client join to this game.
-    * 1: START_FIRST - Start game, current client first.
-    * 2: START_SECOND - Start game, opponent first.
-    * 3: SELECTED <number> - Opponent selected number, end its turn.
-    * 4: FINISHED WIN | LOSE - Game Finished, show result, and show if current user win or lose based on the value.
-    * -1: REJECTED | <Other Error> - Connection Rejected or Error Happened, close the connection.
-    */
+      // flag = handle_server_msg(state, value); //* Handle Server-side message
+      //: Based on the flag value, the client will determine to start, continue or terminate the bingo game.
+      /*
+      > Messages
+      * 0: PENDING - Waiting for another client join to this game.
+      * 1: START_FIRST - Start game, current client first.
+      * 2: START_SECOND - Start game, opponent first.
+      * 3: SELECTED <number> - Opponent selected number, end its turn.
+      * 4: FINISHED WIN | LOSE - Game Finished, show result, and show if current user win or lose based on the value.
+      * -1: REJECTED | <Other Error> - Connection Rejected or Error Happened, close the connection.
+      */
+      // TODO - Need to parse flag.
+    }
   }
 
+  bingo_init();
+  bingo_print();
+
   return;
+}
+
+void bingo_init(void)
+{
+
+  for (int idx = 0; idx < NUM_LIMIT; idx++)
+  {
+    bingo_value[idx] = idx + 1;
+  }
+
+  bingo_shuffle();
+}
+
+void bingo_shuffle(void)
+{
+  srand((unsigned int)time(NULL));
+  int t1, t2, temp;
+  for (int idx = 0; idx < NUM_LIMIT; idx++)
+  {
+    int t1 = rand() % NUM_LIMIT;
+    int t2 = rand() % NUM_LIMIT;
+
+    temp = bingo_value[t1];
+    bingo_value[t1] = bingo_value[t2];
+    bingo_value[t2] = temp;
+  }
+}
+
+void bingo_print(void)
+{
+  for (int idx = 0; idx < NUM_LIMIT; idx++)
+  {
+    if (bingo_value[idx] == -1)
+    { //* If this value had been checked, prints blank.
+      printf("    ");
+    }
+    else
+    {
+      printf("%3d ", bingo_value[idx]);
+    }
+    if ((idx + 1) % 5 == 0)
+    {
+      //* for every 5 values
+      printf("\n"); //*line breaks
+    }
+  }
 }
 
 int handle_server_msg(char *state, char *value)
