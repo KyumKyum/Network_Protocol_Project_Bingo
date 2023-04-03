@@ -303,6 +303,18 @@ int handle_server_msg(char *state, char *value)
   else if (strcmp(state, "FINISHED") == 0)
   {
     ret_val = 4;
+
+    printf("GAME SET! 게임이 종료됩니다!\n");
+    const int flag = atoi(value);
+
+    if (flag == 0)
+    {
+      printf("당신이 이겼습니다! 축하드립니다! :) \n");
+    }
+    else
+    {
+      printf("당신은 졌습니다... 다음에 좋은 기회가 있겠죠! \n");
+    }
   }
   else if (strcmp(state, "REJECTED") == 0)
   {

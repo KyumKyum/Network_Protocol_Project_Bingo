@@ -1,6 +1,7 @@
 #obj files
 client
 server
+test_server
 
 # Prerequisites
 *.d
