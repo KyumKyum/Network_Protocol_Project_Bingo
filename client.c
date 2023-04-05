@@ -84,6 +84,7 @@ void bingo(int sock)
     //* Reset value.
     flag = 0;
     bingo_num = 0;
+    memset(message, 0, sizeof(message));
 
     //* Read Message from the server
     str_len = read(sock, message, BUF_SIZE);
@@ -97,7 +98,6 @@ void bingo(int sock)
 
     if (str_len > 0) //* Works if sth arrives
     {
-      printf("\n%s\n", message);
       char *state = strtok(message, " ");
       char *value = strtok(NULL, " ");
 
@@ -325,7 +325,6 @@ void bingo_send_msg(char *request, char *number, int bingo_num, int sock)
   request = strcat(strcat(firstNum, blank), number);
 
   //* Send message to server
-  printf("\n%s\n", request);
   write(sock, request, REQ_SIZE);
 
   return;
