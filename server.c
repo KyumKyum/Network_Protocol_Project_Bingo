@@ -8,14 +8,14 @@
 #include <sys/select.h>
 
 #define BUF_SIZE 100
-#define CMD_SIZE 20 // for saving bingo command
+#define CMD_SIZE 30 // for saving bingo command
 void error_handling(char *message);
 
 int main(int argc, char *argv[])
 {
 	int serv_sock, clnt_sock;
 	char bingo_data[BUF_SIZE]; // Save bingo data from clients
-	char *select_cmd;					 // Command of "SELECTED <num>"
+	int bingo_c1, bingo_c2;		 // most recent completed bingo number of client 1 and 2
 
 	char start_first[CMD_SIZE] = "START_FIRST";
 	char start_second[CMD_SIZE] = "START_SECOND";
@@ -113,17 +113,24 @@ int main(int argc, char *argv[])
 						fd_max = clnt_sock;
 					}
 
-					printf("Client %d entered room. \n", clnt_cnt);
-
-					if (clnt_cnt == 2) // 2 clients entered
+					if (clnt_cnt < 2) // 0 or 1 client entered
+					{
+						printf("Client %d entered room. \n", clnt_cnt);
+					}
+					else if (clnt_cnt == 2) // 2 clients entered
 					{
 						write(clnt_socknum[0], start_first, strlen(start_first));		// Client 1
 						write(clnt_socknum[1], start_second, strlen(start_second)); // Client 2
 					}
 					else if (clnt_cnt > 2) // More clients attempt connecting
 					{
-						write(clnt_socknum[clnt_cnt - 1], rejected, strlen(rejected));
-						close(clnt_socknum[clnt_cnt - 1]);
+						clnt_cnt--;
+						fd_max--;
+
+						printf("Another client attempts to enter room.\n");
+
+						write(clnt_socknum[clnt_cnt], rejected, strlen(rejected));
+						close(clnt_socknum[clnt_cnt]);
 					}
 				}
 				else // Make bingo game works
@@ -142,33 +149,46 @@ int main(int argc, char *argv[])
 							if (i == clnt_socknum[0]) // Turn of client 1
 							{
 								printf("Bingo of Client 1 : %c \n", bingo_data[0]);
+								bingo_c1 = bingo_data[0] - '0';
 
-								select_cmd = strcat(selected, &bingo_data[2]);
-								printf("%d", clnt_socknum[0]);
-								write(clnt_socknum[1], select_cmd, strlen(select_cmd));
+								strcat(selected, &bingo_data[2]);
+								write(clnt_socknum[1], selected, strlen(selected));
 								// Deliver selected num of client 1 to client 2
 							}
 							else if (i == clnt_socknum[1]) // Turn of client 2
 							{
 								printf("Bingo of Client 2 : %c \n", bingo_data[0]);
-								printf("%d", clnt_socknum[1]);
-								select_cmd = strcat(selected, &bingo_data[2]);
-								write(clnt_socknum[0], select_cmd, strlen(select_cmd));
+								bingo_c2 = bingo_data[0] - '0';
+
+								strcat(selected, &bingo_data[2]);
+								write(clnt_socknum[0], selected, strlen(selected));
 								// Deliver selected num of client 2 to client 1
 							}
 
-							// printf("%s", select_cmd);
+							/*
+								strcat(a1, a2) links string value a1 and a2,
+								then saves the result in a1.
+							*/
 
-							for (j = 0; j < str_len; j++) // Making bingo_data[] empty
+							printf("%s", selected);
+
+							selected[9] = '\0'; // Restore the value changed by strcat() to its original value.
+
+							for (j = 0; j < str_len; j++) // Make bingo_data[] empty
 							{
 								bingo_data[j] = '\0';
 							}
 						}
 						else // One of clients completed 3 or more bingo
 						{
+							printf("***Final Result*** \n");
 
 							if (i == clnt_socknum[0]) // Winner : Client 1
 							{
+								bingo_c1 = bingo_data[0] - '0';
+								printf("Client 1 : %d BINGO \n", bingo_c1);
+								printf("Client 2 : %d BINGO \n", bingo_c2);
+
 								write(clnt_socknum[0], finished_win, strlen(finished_win));
 								write(clnt_socknum[1], finished_lose, strlen(finished_lose));
 
@@ -177,12 +197,18 @@ int main(int argc, char *argv[])
 							}
 							else if (i == clnt_socknum[1]) // Winner : client 2
 							{
+								bingo_c2 = bingo_data[0] - '0';
+								printf("Client 1 : %d BINGO \n", bingo_c1);
+								printf("Client 2 : %d BINGO \n", bingo_c2);
+
 								write(clnt_socknum[0], finished_lose, strlen(finished_lose));
 								write(clnt_socknum[1], finished_win, strlen(finished_win));
 
 								close(clnt_socknum[0]);
 								close(clnt_socknum[1]);
 							}
+
+							printf("\n**The game is over. Close the server connection.** \n");
 						}
 					}
 				}
